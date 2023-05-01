@@ -14,7 +14,7 @@ Logging support was also added to the backtester so that the format is compatibl
 
 To-do list:
 1. Expand engine support to all rounds (currently only round 1 is supported)
-(2. Perhaps add bots that mimic the bevaior of IMC's trading bots)
+2. Perhaps add bots that mimic the bevaior of IMC's trading bots
 
 ## Traders
 `default.py` is the example bot provided by IMC.
