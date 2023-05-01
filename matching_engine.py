@@ -1,10 +1,8 @@
-#TODO: Add PnL support
-#TODO: Add Logging support
 #TODO: So far only supports round 1 data
 
 import pandas as pd
 from datamodel import Listing, OrderDepth, Trade, TradingState, Order
-from traders.default import Trader
+from traders.default_with_log import Trader, Logger
 
 LISTINGS = {
     "PEARLS": Listing(symbol="PEARLS", product="PEARLS", denomination="SEASHELLS"),
@@ -13,14 +11,26 @@ LISTINGS = {
 POS_LIMIT = {"PEARLS": 20, "BANANAS": 20}
 ROUND = 1
 DAY = -1
-NAME = "nn"
+NAME = "nn" #If name of trader included (nn/wn)
+
+
+class MyLog:
+    """A class to record logged items"""
+    def __init__(self):
+        self.sandbox = "Sandbox logs:\n"
+        self.submission = "Submission logs:\n"
+        self.activities = "Activities log:\n" + "day;timestamp;product;bid_price_1;" + \
+            "bid_volume_1;bid_price_2;bid_volume_2;bid_price_3;bid_volume_3;ask_price_1;" + \
+            "ask_volume_1;ask_price_2;ask_volume_2;ask_price_3;ask_volume_3;mid_price;" + \
+            "profit_and_loss\n"
 
 
 class Myself:
     """ A class to record position and profit and loss"""
     def __init__(self):
         self.position = {product: 0 for product in LISTINGS}
-        self.pnl = 0
+        self.pnl = {} #timestamp as key and profit_dict {product:profit} as value
+        self._cost = {product: 0 for product in LISTINGS} #Helper variable to calculate profit
         self.trader = Trader()
         self.trade_hist = {} #timestamp as key and own_trades as value
 
@@ -114,17 +124,70 @@ def matching(orders, state, myself):
     return outstanding_orders
 
 
+def calculate_profit(timestamp, state, myself):
+    """
+    Calculates the current pnl of the bot.
+    PNL is the sum of equity values (all products' mid-prices multiplied by the
+    bot's positions) plus cost of purchase (negative if buy, positive if sell)
+    """
+    trades_made = myself.trade_hist[timestamp]
+    profit = {product: 0 for product in LISTINGS}
+
+    for product in LISTINGS:
+        equity_value = 0
+        mid_price = (max(state.order_depths[product].buy_orders) + min(state.order_depths[product].sell_orders)) / 2
+        equity_value += (mid_price * myself.position[product])
+        for trade in trades_made[product]:
+            myself._cost[product] -= (trade.price * trade.quantity)
+        profit[product] = equity_value + myself._cost[product]
+
+    myself.pnl[timestamp] = profit
+    return profit
+
+
+def generate_log(timestamp, prices_snapshot, log, log_result):
+    """
+    A function to record the logs
+    """
+    log.sandbox += (str(timestamp) + " " + log_result +"\n")
+
+    for _, row in prices_snapshot.iterrows():
+        temp_lst = row.tolist()
+        new_lst = ["" if pd.isna(i) else str(i) for i in temp_lst]
+        new_lst[-1] = str(myself.pnl[int(new_lst[1])][new_lst[2]])
+        activity = ";".join(new_lst)
+        log.activities += (activity + "\n")
+
+
+
 prices_data = pd.read_csv(
     "island_data_bottle/prices_round_"+str(ROUND)+"_day_"+str(DAY)+".csv"
 )
 trades_data = pd.read_csv(
     "island_data_bottle/trades_round_"+str(ROUND)+"_day_"+str(DAY)+"_"+NAME+".csv"
 )
+my_log = MyLog()
 myself = Myself()
-for i in range(100): #Full thing is 10000
+for i in range(10000): #Full thing is 10000
     timestamp = i*100
     prices_snapshot = prices_data[prices_data["timestamp"]==timestamp]
     trades_snapshot = trades_data[trades_data["timestamp"]==timestamp]
     state = generate_state(timestamp, prices_snapshot, trades_snapshot, myself)
-    orders = myself.trader.run(state)
+
+    orders, log_result = myself.trader.run(state)
     outstanding_orders = matching(orders, state, myself)
+    pnl = calculate_profit(timestamp, state, myself)
+
+    generate_log(timestamp, prices_snapshot, my_log, log_result)
+
+#Outputted log has to be put into visualiser_log.log to be compatible with visualiser
+with open("trade_log.log", "w") as file:
+    file.write(my_log.sandbox + "\n\n" + my_log.submission + "\n\n" + my_log.activities)
+
+#logger = logging.getLogger('trade_log')
+#logger.setLevel(logging.DEBUG)
+## create file handler which logs even debug messages
+#file_handler = logging.FileHandler('trade_log.log', mode="w", encoding='utf-8')
+#file_handler.setLevel(logging.DEBUG)
+#logger.addHandler(file_handler)
+#logger.debug(my_log.sandbox + "\n\n" + my_log.submission + "\n\n" + my_log.activities)
