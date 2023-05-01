@@ -2,7 +2,7 @@
 I put here my trading bots and other codes related to IMC's trading competition Prosperity.
 
 ## Matching Engine
-Someone who had experience with quantitative developer interviews told me he was sometimes asked to code out a matching engine. So I think it would be great to include my `matching_engine.py` here to showcase my work.
+Someone who had experience with quantitative developer interviews told me he was sometimes asked to code out a matching engine. So I think it would be great to include my `matching_engine.py` here to showcase my work. I don't think this is the fastest backtester for this competition out there but it is likely to be one of the most concise one.
 
 Matching engine is essentially my backtester for my trading bots. It aims to simulate the trading activities in the competition and provide me with a log that is competible with [this wonderful visualizer](https://jmerle.github.io/imc-prosperity-visualizer/) built by Jasper.
 
