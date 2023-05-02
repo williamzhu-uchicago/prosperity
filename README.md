@@ -18,3 +18,5 @@ To-do list:
 
 ## Traders
 `default.py` is the example bot provided by IMC.
+`default_with_log.py` is the example bot provided by IMC but is made compatible with visualiser.
+`stanford_cardinal.py` is the trade bot by [team Stanford Cardinal](https://github.com/ShubhamAnandJain/IMC-Prosperity-2023-Stanford-Cardinal). They ranked #2 overall in the competition. All credit goes to them.
